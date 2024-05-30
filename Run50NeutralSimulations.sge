@@ -1,0 +1,41 @@
+#!/bin/bash
+# Use current working directory
+#$ -cwd
+#
+# Join stdout and stderr
+#$ -j y
+#
+# Run job through bash shell
+#$ -S /bin/bash
+#
+#You can edit the scriptsince this line
+#
+# Your job name
+#$ -N simulacionoesd
+#
+# Send an email after the job has finished
+#$ -m e
+#$ -M alessandro@ciencias.unam.mx
+#
+# If modules are needed, source modules environment (Do not delete the next line):
+. /etc/profile.d/modules.sh
+#
+# Add any modules you might require:
+module load slim/4.1
+#
+# Write your commands in the next line
+
+echo "Iniciando script..."
+
+# This is to repeeat 50 times to obtain 50 simulations
+valores=("MP100" "MP25" "MP9" "NMP100" "NMP25" "NMP9")
+
+# Iterate in each value
+for valor in "${valores[@]}"; do
+    # Execute the comands for each folder
+    slim -s $SGE_TASK_ID "${valor}.slim" > "sim_${valor}_$SGE_TASK_ID.txt"
+    tail -n +16 "sim_${valor}_$SGE_TASK_ID.txt" > "sim_${valor}_$SGE_TASK_ID._sinprimeras15.txt"
+    mkdir -p "${valor}"
+    sed 's/:\([^ ]*\)/\1/g' "sim_${valor}_$SGE_TASK_ID._sinprimeras15.txt" > "${valor}/sim_$SGE_TASK_ID.txt"
+    rm "sim_${valor}_$SGE_TASK_ID.txt" "sim_${valor}_$SGE_TASK_ID._sinprimeras15.txt"
+done

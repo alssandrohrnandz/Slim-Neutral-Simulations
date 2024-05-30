@@ -1,0 +1,56 @@
+initialize() {
+	initializeSex("A"); //autosomal chr
+	defineConstant("Migration",0.01);
+	initializeMutationRate(1e-7);
+	initializeMutationType("m1", 0.5, "f", 0.0);
+	initializeMutationType("m2", 0.5, "f", 0.00); //positive mutation
+	initializeGenomicElementType("g1", m1, 1.0);
+	initializeGenomicElement(g1, 0, 99999);
+	initializeRecombinationRate(1e-7);
+}
+//create our two dimensional subpopulation matrix of metapopSide x metapopSide with 100 individuals
+1 late() {
+	metapopSide=3;
+	metapopSize=metapopSide*metapopSide;
+	for (i in 1:metapopSize)
+		sim.addSubpop(i,500);
+	//migration rates btwn each subpop
+	subpops = sim.subpopulations;
+	for (x in 1:metapopSide)
+		for (y in 1:metapopSide)
+		{
+			destID = (x - 1) + (y - 1) * metapopSide + 1;
+			ds = subpops[destID - 1];
+			if (x > 1) // left to right
+				ds.setMigrationRates(destID - 1, Migration);
+			if (x < metapopSide) // right to left
+				ds.setMigrationRates(destID + 1, Migration);
+			if (y > 1) // top to bottom
+				ds.setMigrationRates(destID - metapopSide, Migration);
+			if (y < metapopSide) // bottom to top
+				ds.setMigrationRates(destID + metapopSide, Migration);
+
+			// set up SLiMgui's population visualization nicely
+			xd = ((x - 1) / (metapopSide - 1)) * 0.9 + 0.05;
+			yd = ((y - 1) / (metapopSide - 1)) * 0.9 + 0.05;
+			ds.configureDisplay(c(xd, yd), 0.4);
+		}
+
+
+}
+//adding new beneficial mutation in 25 ind in p1
+1 late() {
+	target=sample(p1.genomes,50);
+	target.addNewDrawnMutation(m2,rdunif(1,0,sim.chromosome.lastPosition));
+
+}
+//following in each thick the number of chr which contains the beneficial mutation in each subpopulation
+1:2000 late() {
+	sweep = sim.mutationsOfType(m2);
+	if (size(sweep) > 0) {
+		for (subpop in sim.subpopulations) {
+			freq = sim.mutationFrequencies(subpop, sweep);
+			catn(sim.cycle + ": " + freq+" p"+subpop.id );
+		}
+	}
+}

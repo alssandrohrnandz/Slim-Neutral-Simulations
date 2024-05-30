@@ -1,0 +1,65 @@
+#!/bin/bash
+# Use current working directory
+#$ -cwd
+#
+# Join stdout and stderr
+#$ -j y
+#
+# Run job through bash shell
+#$ -S /bin/bash
+#
+#You can edit the scriptsince this line
+#
+# Your job name
+#$ -N Execute_All
+#
+# Send an email after the job has finished
+#$ -m e
+#$ -M alessandro@ciencias.unam.mx
+#
+# If modules are needed, source modules environment (Do not delete the next line):
+. /etc/profile.d/modules.sh
+#
+# Add any modules you might require:
+module load python37/3.7.0
+#
+# Write your commands in the next line
+
+# Verificar que SGE_TASK_ID esté definido
+if [ -z "${SGE_TASK_ID}" ]; then
+    echo "Error: SGE_TASK_ID no está definido."
+    exit 1
+fi
+
+carpetas=("MP100" "MP25" "MP9" "NMP100" "NMP25" "NMP9")
+
+for carpeta in "${carpetas[@]}"; do
+    if [ -d "${carpeta}" ]; then
+        echo "Calculando el número de alelos totales y derivados en ${carpeta}"
+        (
+            cd "${carpeta}" &&
+            for archivo in sim_"${SGE_TASK_ID}".txt; do
+                if [ -f "${archivo}" ]; then
+                    awk '{print $0, "1000"}' "$archivo" > "${archivo}_temp"
+                    awk '{$5=$2*$4} 1' "${archivo}_temp" > "${archivo}_temp2"
+                    mv "${archivo}_temp2" "$archivo"
+                    rm "${archivo}_temp"
+                else
+                    echo "Archivo ${archivo} no encontrado en ${carpeta}"
+                fi
+            done
+        )
+    else
+        echo "Error en carpeta ${carpeta}"
+    fi
+done
+
+# Ejecutar coordenadas.py en paralelo usando SGE_TASK_ID
+for carpeta in "${carpetas[@]}"; do
+    if [ -d "${carpeta}" ]; then
+        echo "Ejecutando coordinates.py en ${carpeta}"
+        (cd "${carpeta}" && python coordinates.py "${SGE_TASK_ID}")
+    else
+        echo "La carpeta ${carpeta} no existe"
+    fi
+done
